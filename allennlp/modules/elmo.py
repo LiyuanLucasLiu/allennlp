@@ -523,6 +523,7 @@ class _ElmoBiLm(torch.nn.Module):
                                    hidden_size=options['lstm']['projection_dim'],
                                    cell_size=options['lstm']['dim'],
                                    num_layers=options['lstm']['n_layers'],
+                                   two_head=options['lstm'].get('two_head', False),
                                    memory_cell_clip_value=options['lstm']['cell_clip'],
                                    state_projection_clip_value=options['lstm']['proj_clip'],
                                    requires_grad=requires_grad)

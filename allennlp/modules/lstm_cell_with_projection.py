@@ -57,6 +57,7 @@ class LstmCellWithProjection(torch.nn.Module):
                  input_size: int,
                  hidden_size: int,
                  cell_size: int,
+                 two_head: bool = False,
                  go_forward: bool = True,
                  recurrent_dropout_probability: float = 0.0,
                  memory_cell_clip_value: Optional[float] = None,
@@ -78,6 +79,10 @@ class LstmCellWithProjection(torch.nn.Module):
 
         # Additional projection matrix for making the hidden state smaller.
         self.state_projection = torch.nn.Linear(cell_size, hidden_size, bias=False)
+        if two_head:
+            self.state_projection_1 = torch.nn.Linear(cell_size, hidden_size, bias=False)
+        else:
+            self.state_projection_1 = None
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -134,6 +139,9 @@ class LstmCellWithProjection(torch.nn.Module):
         current_length_index = batch_size - 1 if self.go_forward else 0
         if self.recurrent_dropout_probability > 0.0 and self.training:
             dropout_mask = get_dropout_mask(self.recurrent_dropout_probability,
+                                            full_batch_previous_state)
+            if self.state_projection_1 is not None:
+                dropout_mask_1 = get_dropout_mask(self.recurrent_dropout_probability,
                                             full_batch_previous_state)
         else:
             dropout_mask = None
@@ -202,15 +210,24 @@ class LstmCellWithProjection(torch.nn.Module):
 
             # shape (current_length_index, hidden_size)
             timestep_output = self.state_projection(pre_projection_timestep_output)
+            if self.state_projection_1 is not None:
+                timestep_output_1 = self.state_projection_1(pre_projection_timestep_output)
             if self.state_projection_clip_value:
                 # pylint: disable=invalid-unary-operand-type
                 timestep_output = torch.clamp(timestep_output,
                                               -self.state_projection_clip_value,
                                               self.state_projection_clip_value)
+                if self.state_projection_1 is not None:
+                    timestep_output_1 = torch.clamp(timestep_output_1,
+                                              -self.state_projection_clip_value,
+                                              self.state_projection_clip_value)
+
 
             # Only do dropout if the dropout prob is > 0.0 and we are in training mode.
             if dropout_mask is not None:
                 timestep_output = timestep_output * dropout_mask[0: current_length_index + 1]
+                if self.state_projection_1 is not None:
+                    timestep_output_1 = timestep_output_1 * dropout_mask_1[0: current_length_index + 1]
 
             # We've been doing computation with less than the full batch, so here we create a new
             # variable for the the whole batch at this timestep and insert the result for the
@@ -219,7 +236,10 @@ class LstmCellWithProjection(torch.nn.Module):
             full_batch_previous_state = full_batch_previous_state.clone()
             full_batch_previous_memory[0:current_length_index + 1] = memory
             full_batch_previous_state[0:current_length_index + 1] = timestep_output
-            output_accumulator[0:current_length_index + 1, index] = timestep_output
+            if self.state_projection_1 is not None:
+                output_accumulator[0:current_length_index + 1, index] = timestep_output_1
+            else:
+                output_accumulator[0:current_length_index + 1, index] = timestep_output
 
         # Mimic the pytorch API by returning state in the following shape:
         # (num_layers * num_directions, batch_size, ...). As this
