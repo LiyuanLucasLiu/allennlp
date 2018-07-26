@@ -498,7 +498,6 @@ class Trainer:
                                  for name, param in self._model.named_parameters()}
                 self._optimizer.step()
                 for name, param in self._model.named_parameters():
-<<<<<<< HEAD
                     if param.requires_grad:
                         param_updates[name].sub_(param.detach().cpu())
                         update_norm = torch.norm(param_updates[name].view(-1, ))
@@ -506,14 +505,6 @@ class Trainer:
                         self._tensorboard.add_train_scalar("gradient_update/" + name,
                                                            update_norm / (param_norm + 1e-7),
                                                            batch_num_total)
-=======
-                    param_updates[name].sub_(param.detach().cpu())
-                    update_norm = torch.norm(param_updates[name].view(-1, ))
-                    param_norm = torch.norm(param.view(-1, )).cpu()
-                    self._tensorboard.add_train_scalar("gradient_update/" + name,
-                                                       update_norm / (param_norm + 1e-7),
-                                                       batch_num_total)
->>>>>>> ad265f85e8d9668338c7e09ed564777f1a8a914e
             else:
                 self._optimizer.step()
 
@@ -569,7 +560,6 @@ class Trainer:
         """
         # Log parameter values to Tensorboard
         for name, param in self._model.named_parameters():
-<<<<<<< HEAD
             if param.requires_grad:
                 self._tensorboard.add_train_scalar("parameter_mean/" + name,
                                                    param.data.mean(),
@@ -581,33 +571,15 @@ class Trainer:
                         grad_data = param.grad.data._values()
                     else:
                         grad_data = param.grad.data
-=======
-            self._tensorboard.add_train_scalar("parameter_mean/" + name,
-                                               param.data.mean(),
-                                               epoch)
-            self._tensorboard.add_train_scalar("parameter_std/" + name, param.data.std(), epoch)
-            if param.grad is not None:
-                if is_sparse(param.grad):
-                    # pylint: disable=protected-access
-                    grad_data = param.grad.data._values()
-                else:
-                    grad_data = param.grad.data
-
-                # skip empty gradients
-                if torch.prod(torch.tensor(grad_data.shape)).item() > 0: # pylint: disable=not-callable
->>>>>>> ad265f85e8d9668338c7e09ed564777f1a8a914e
                     self._tensorboard.add_train_scalar("gradient_mean/" + name,
                                                        grad_data.mean(),
                                                        epoch)
                     self._tensorboard.add_train_scalar("gradient_std/" + name,
                                                        grad_data.std(),
                                                        epoch)
-<<<<<<< HEAD
-=======
                 else:
                     # no gradient for a parameter with sparse gradients
                     logger.info("No gradient for %s, skipping tensorboard logging.", name)
->>>>>>> ad265f85e8d9668338c7e09ed564777f1a8a914e
         # norm of gradients
         if batch_grad_norm is not None:
             self._tensorboard.add_train_scalar("gradient_norm",
@@ -948,6 +920,8 @@ class Trainer:
             # No checkpoint to restore, start at 0
             return 0, []
 
+        logger.info("restoring latest checkpoint...")
+
         model_path, training_state_path = latest_checkpoint
 
         # Load the parameters onto CPU, then transfer to GPU.
@@ -956,8 +930,8 @@ class Trainer:
         # buffer. The GPU transfer happens implicitly in load_state_dict.
         model_state = torch.load(model_path, map_location=util.device_mapping(-1))
         training_state = torch.load(training_state_path, map_location=util.device_mapping(-1))
-        self._model.load_state_dict(model_state)
-        self._optimizer.load_state_dict(training_state["optimizer"])
+        self._model.load_state_dict(model_state, False)
+        self._optimizer.load_state_dict(training_state["optimizer"], False)
         move_optimizer_to_cuda(self._optimizer)
 
         # We didn't used to save `validation_metric_per_epoch`, so we can't assume
