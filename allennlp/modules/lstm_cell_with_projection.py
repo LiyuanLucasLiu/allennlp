@@ -222,7 +222,6 @@ class LstmCellWithProjection(torch.nn.Module):
                                               -self.state_projection_clip_value,
                                               self.state_projection_clip_value)
 
-
             # Only do dropout if the dropout prob is > 0.0 and we are in training mode.
             if dropout_mask is not None:
                 timestep_output = timestep_output * dropout_mask[0: current_length_index + 1]
