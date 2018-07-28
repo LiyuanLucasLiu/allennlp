@@ -931,7 +931,7 @@ class Trainer:
         model_state = torch.load(model_path, map_location=util.device_mapping(-1))
         training_state = torch.load(training_state_path, map_location=util.device_mapping(-1))
         self._model.load_state_dict(model_state, False)
-        self._optimizer.load_state_dict(training_state["optimizer"], False)
+        self._optimizer.load_state_dict(training_state["optimizer"])
         move_optimizer_to_cuda(self._optimizer)
 
         # We didn't used to save `validation_metric_per_epoch`, so we can't assume
