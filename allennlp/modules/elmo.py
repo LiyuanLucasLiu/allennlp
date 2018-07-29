@@ -404,11 +404,11 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         self._convolutions = convolutions
 
         # the highway layers
-        if cnn_options['projection']['location'] == 'after_cnn':
-            highway_dim = cnn_options['projection']['dim']
-        else:
+        # if cnn_options['projection']['location'] == 'after_cnn':
+        #     highway_dim = cnn_options['projection']['dim']
+        # else:
             # highway dim is the number of CNN filters
-            highway_dim = sum(f[1] for f in filters)
+        highway_dim = sum(f[1] for f in filters)
         n_highway = cnn_options['n_highway']
         self._highways = Highway(
             highway_dim, n_highway, activation=torch.nn.functional.relu)
@@ -422,8 +422,8 @@ class _ElmoCharacterEncoder(torch.nn.Module):
     
         # the projection layer -- always n_filters -> projection dim
         n_filters = sum(f[1] for f in filters)
-        projection_dim = cnn_options['projection']['dim']
-        self._projection = torch.nn.Linear(n_filters, projection_dim, bias=True)
+        # projection_dim = cnn_options['projection']['dim']
+        self._projection = torch.nn.Linear(n_filters, self.output_dim, bias=True)
         self._projection.weight.data.normal_(mean=0.0,
                                              std=np.sqrt(1.0 / n_filters))
         self._projection.bias.data.fill_(0.0)
