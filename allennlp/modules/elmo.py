@@ -98,6 +98,11 @@ class Elmo(torch.nn.Module):
                                         weight_file,
                                         requires_grad=requires_grad,
                                         vocab_to_cache=vocab_to_cache)
+            
+        if not requires_grad:
+            for param in self._elmo_lstm.parameters():
+                param.requires_grad = False
+
         self._has_cached_vocab = vocab_to_cache is not None
         self._dropout = Dropout(p=dropout)
         self._scalar_mixes: Any = []
@@ -283,9 +288,6 @@ class _ElmoCharacterEncoder(torch.nn.Module):
         self._build_graph()
 
         self.requires_grad = requires_grad
-        if not requires_grad:
-            for param in self.parameters():
-                param.requires_grad = False
 
         # Cache the arrays for use in forward -- +1 due to masking.
         self._beginning_of_sentence_characters = torch.from_numpy(
@@ -485,6 +487,7 @@ class _ElmoBiLm(torch.nn.Module):
                                    hidden_size=options['lstm']['projection_dim'],
                                    cell_size=options['lstm']['dim'],
                                    num_layers=options['lstm']['n_layers'],
+                                   pre_relu=options['lstm'].get('pre_relu', False),
                                    two_head=options['lstm'].get('two_head', False),
                                    memory_cell_clip_value=options['lstm']['cell_clip'],
                                    state_projection_clip_value=options['lstm']['proj_clip'],

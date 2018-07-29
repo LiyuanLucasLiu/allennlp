@@ -57,6 +57,7 @@ class LstmCellWithProjection(torch.nn.Module):
                  input_size: int,
                  hidden_size: int,
                  cell_size: int,
+                 pre_relu: bool = False,
                  two_head: bool = False,
                  go_forward: bool = True,
                  recurrent_dropout_probability: float = 0.0,
@@ -84,6 +85,8 @@ class LstmCellWithProjection(torch.nn.Module):
         else:
             self.state_projection_1 = None
         self.reset_parameters()
+
+        self.relu = torch.nn.ReLU() if pre_relu else lambda x: x
 
     def reset_parameters(self):
         # Use sensible default initializations for parameters.
@@ -128,6 +131,8 @@ class LstmCellWithProjection(torch.nn.Module):
         total_timesteps = inputs.size()[1]
 
         output_accumulator = inputs.new_zeros(batch_size, total_timesteps, self.hidden_size)
+
+        inputs = self.relu(inputs)
 
         if initial_state is None:
             full_batch_previous_memory = inputs.new_zeros(batch_size, self.cell_size)
